@@ -4,6 +4,18 @@ from os.path import isfile, join
 import zipfile
 import shutil
 from pathlib import Path
+import tkinter as tk
+
+root = tk.Tk()
+
+root.geometry("800x500")
+root.title("For the record")
+
+label = tk.Label(root, text="Hello World!", font=("Arial", 18))
+label.pack()
+
+root.mainloop()
+
 
 # -----------------------------------------------------------------------------------------
 # Folder names
