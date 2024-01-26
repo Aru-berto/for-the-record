@@ -6,6 +6,35 @@ import shutil
 from pathlib import Path
 import customtkinter
 from tkinter import filedialog
+from datetime import datetime
+
+
+class ToplevelWindow(customtkinter.CTkToplevel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.title("Done")
+        self.geometry(self.CenterWindowToDisplay(260, 100, self._get_window_scaling()))
+        self.after(0, self.grab_set())
+        self.resizable(False, False)
+        self.bell()
+
+        self.label10_completion_window = customtkinter.CTkLabel(
+            self, text="All done boss!", font=("Arial", 28)
+        )
+        self.label10_completion_window.pack(pady=(30, 10))
+
+    def CenterWindowToDisplay(
+        Screen: customtkinter.CTkToplevel,
+        width: int,
+        height: int,
+        scale_factor: float = 1.0,
+    ):
+        screen_width = Screen.winfo_screenwidth()
+        screen_height = Screen.winfo_screenheight()
+        x = int(((screen_width / 2) - (width / 1.6)) * scale_factor)
+        y = int(((screen_height / 2) - (height / 1.8)) * scale_factor)
+
+        return f"{width}x{height}+{x}+{y}"
 
 
 class App(customtkinter.CTk):
@@ -14,13 +43,22 @@ class App(customtkinter.CTk):
 
         # ------------------------------------------------------------------------------------
         # Attributes
-        self.folder01 = "..."
-        self.folder02 = "..."
+        self.folder01 = ""
+        self.folder02 = ""
 
         # ------------------------------------------------------------------------------------
         # Window
-        self.geometry("1000x800")
-        self.title("For the record")
+        self.app_width = 1200
+        self.app_height = 780
+
+        self.geometry(
+            self.CenterWindowToDisplay(
+                self.app_width, self.app_height, self._get_window_scaling()
+            )
+        )
+        self.title("Directory comparator")
+
+        self.toplevel_window = None
 
         # ------------------------------------------------------------------------------------
         # Buttons
@@ -28,29 +66,34 @@ class App(customtkinter.CTk):
             self,
             text="Select",
             command=self.button_select_folder01,
-            font=("Arial", 14),
+            font=("Arial", 16),
         )
         self.button_select_folder2 = customtkinter.CTkButton(
             self,
             text="Select",
             command=self.button_select_folder02,
-            font=("Arial", 14),
+            font=("Arial", 16),
         )
         self.button_confirm1 = customtkinter.CTkButton(
             self,
             text="Start",
             command=self.confirm,
             state="disabled",
-            font=("Arial", 14),
+            font=("Arial", 16),
         )
+
+        # ------------------------------------------------------------------------------------
+        # Progress bar
+        self.progressbar = customtkinter.CTkProgressBar(master=self)
+        self.progressbar.set(0)
 
         # ------------------------------------------------------------------------------------
         # Frames
         self.scrollable_frame01 = customtkinter.CTkScrollableFrame(
-            self, width=400, height=300
+            self, width=500, height=300
         )
         self.scrollable_frame02 = customtkinter.CTkScrollableFrame(
-            self, width=400, height=300
+            self, width=500, height=300
         )
 
         # ------------------------------------------------------------------------------------
@@ -105,16 +148,16 @@ class App(customtkinter.CTk):
             master=self.scrollable_frame01,
             text="",
             fg_color="transparent",
-            font=("Arial", 18),
-            wraplength=300,
+            font=("Arial", 12),
+            wraplength=400,
             justify="left",
         )
         self.label9_frame2_text = customtkinter.CTkLabel(
             master=self.scrollable_frame02,
             text="",
             fg_color="transparent",
-            font=("Arial", 18),
-            wraplength=300,
+            font=("Arial", 12),
+            wraplength=400,
             justify="left",
         )
 
@@ -173,28 +216,64 @@ class App(customtkinter.CTk):
             sticky=customtkinter.W + customtkinter.N,
         )
         # ------------------------
+
+        self.progressbar.grid(
+            row=10,
+            column=0,
+            padx=20,
+            pady=(30, 5),
+            sticky=customtkinter.W + customtkinter.E,
+            columnspan=2,
+        )
+
         self.button_confirm1.grid(
-            row=11, column=0, padx=20, pady=(30, 5), sticky=customtkinter.W
+            row=11, column=1, padx=20, pady=(30, 5), sticky=customtkinter.E
         )
 
     # ------------------------------------------------------------------------------------
     # Methods
+
+    def CenterWindowToDisplay(
+        Screen: customtkinter.CTk, width: int, height: int, scale_factor: float = 1.0
+    ):
+        screen_width = Screen.winfo_screenwidth()
+        screen_height = Screen.winfo_screenheight()
+        x = int(((screen_width / 2) - (width / 2)) * scale_factor)
+        y = int(((screen_height / 2) - (height / 2)) * scale_factor)
+
+        return f"{width}x{height}+{x}+{y}"
+
     def change_frames_and_button(self):
-        self.label8_frame1_text.configure(
-            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam purus metus, eleifend eget lacus in, iaculis malesuada lectus. Aenean laoreet arcu sed augue efficitur, sit amet sagittis ligula mattis. Fusce ultricies rutrum augue vel volutpat. Proin efficitur ac neque id elementum. Vestibulum auctor ex sit amet auctor dapibus. Sed interdum eros in velit sagittis tincidunt. Praesent sagittis lacinia ligula a vehicula. Aliquam lacinia urna ac quam aliquet, et tristique ante suscipit. Pellentesque sit amet ullamcorper purus. In a viverra diam. Nulla at nibh porttitor, vestibulum nunc faucibus, malesuada orci. Fusce elementum rutrum lacus, at efficitur tortor ultricies quis. \n Ut tempus, massa in porta hendrerit, nulla mauris placerat dolor, in tincidunt urna justo vitae ipsum. Aenean a nunc et neque commodo congue. Etiam dignissim lorem interdum risus cursus, eu blandit dui tincidunt. Quisque vulputate arcu eu nisl interdum, sit amet suscipit nisi auctor. Integer augue ex, ultrices id iaculis vel, dignissim sed purus. Aliquam nunc arcu, luctus convallis dignissim eu, pulvinar sagittis tellus. Aliquam vestibulum justo nibh, sed hendrerit erat tincidunt ullamcorper. Morbi diam eros, interdum ac iaculis rhoncus, porta in ipsum. Aenean lobortis maximus aliquam. Sed imperdiet posuere enim at pretium. \nVivamus in varius nulla, non tincidunt urna. Vestibulum sit amet sem vel arcu mollis pharetra vitae a eros. Aliquam arcu leo, vestibulum nec condimentum in, maximus quis dolor. Nulla magna odio, vestibulum sit amet hendrerit vel, mattis ut felis. Etiam venenatis in libero rutrum finibus. Etiam tempor porta pellentesque. Nunc et massa id nulla iaculis ultrices in ac lacus. Nam a venenatis nisi, in posuere magna. Morbi vehicula consectetur tincidunt. Nunc sit amet ex suscipit ex consequat tempor. Phasellus laoreet sed tortor a dapibus. Duis non nulla ipsum. Integer imperdiet dignissim enim id ultrices.\nMorbi porta hendrerit lectus, nec faucibus lectus molestie eu. Aenean est arcu, mattis vel nulla vel, mattis vulputate ligula. Maecenas sit amet turpis sodales erat tincidunt ultricies. Vivamus eget urna tincidunt, egestas arcu ut, tempor nunc. Cras venenatis dapibus turpis, a bibendum leo hendrerit ac. Pellentesque efficitur pretium est sed molestie. Sed pretium, orci sed semper elementum, nunc odio aliquam lacus, nec rhoncus dolor leo id justo. Nulla bibendum turpis nunc, vel luctus augue cursus congue. Duis porttitor venenatis eros. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Ut feugiat, lacus quis consequat viverra, metus lacus tempor diam, vel dictum justo justo et metus. Praesent augue ipsum, ultrices eu libero faucibus, tristique laoreet quam. Donec pretium malesuada placerat. Integer quis dignissim risus. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.\nPraesent interdum dignissim lacus, sit amet ullamcorper odio iaculis a. Pellentesque euismod est vel quam malesuada vulputate. Integer tristique libero justo, sed aliquet sapien volutpat sed. Mauris at finibus neque. Pellentesque quam quam, volutpat at sagittis a, fringilla eu est. Etiam vel orci at metus vestibulum accumsan. In posuere, lacus eget lacinia ornare, felis ligula tempus lacus, ut vehicula est enim nec mi. Maecenas interdum tempus mollis. In hac habitasse platea dictumst. "
-        )
-        self.label9_frame2_text.configure(
-            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam purus metus, eleifend eget lacus in, iaculis malesuada lectus. Aenean laoreet arcu sed augue efficitur, sit amet sagittis ligula mattis. Fusce ultricies rutrum augue vel volutpat. Proin efficitur ac neque id elementum. Vestibulum auctor ex sit amet auctor dapibus. Sed interdum eros in velit sagittis tincidunt. Praesent sagittis lacinia ligula a vehicula. Aliquam lacinia urna ac quam aliquet, et tristique ante suscipit. Pellentesque sit amet ullamcorper purus. In a viverra diam. Nulla at nibh porttitor, vestibulum nunc faucibus, malesuada orci. Fusce elementum rutrum lacus, at efficitur tortor ultricies quis. \n Ut tempus, massa in porta hendrerit, nulla mauris placerat dolor, in tincidunt urna justo vitae ipsum. Aenean a nunc et neque commodo congue. Etiam dignissim lorem interdum risus cursus, eu blandit dui tincidunt. Quisque vulputate arcu eu nisl interdum, sit amet suscipit nisi auctor. Integer augue ex, ultrices id iaculis vel, dignissim sed purus. Aliquam nunc arcu, luctus convallis dignissim eu, pulvinar sagittis tellus. Aliquam vestibulum justo nibh, sed hendrerit erat tincidunt ullamcorper. Morbi diam eros, interdum ac iaculis rhoncus, porta in ipsum. Aenean lobortis maximus aliquam. Sed imperdiet posuere enim at pretium. \nVivamus in varius nulla, non tincidunt urna. Vestibulum sit amet sem vel arcu mollis pharetra vitae a eros. Aliquam arcu leo, vestibulum nec condimentum in, maximus quis dolor. Nulla magna odio, vestibulum sit amet hendrerit vel, mattis ut felis. Etiam venenatis in libero rutrum finibus. Etiam tempor porta pellentesque. Nunc et massa id nulla iaculis ultrices in ac lacus. Nam a venenatis nisi, in posuere magna. Morbi vehicula consectetur tincidunt. Nunc sit amet ex suscipit ex consequat tempor. Phasellus laoreet sed tortor a dapibus. Duis non nulla ipsum. Integer imperdiet dignissim enim id ultrices.\nMorbi porta hendrerit lectus, nec faucibus lectus molestie eu. Aenean est arcu, mattis vel nulla vel, mattis vulputate ligula. Maecenas sit amet turpis sodales erat tincidunt ultricies. Vivamus eget urna tincidunt, egestas arcu ut, tempor nunc. Cras venenatis dapibus turpis, a bibendum leo hendrerit ac. Pellentesque efficitur pretium est sed molestie. Sed pretium, orci sed semper elementum, nunc odio aliquam lacus, nec rhoncus dolor leo id justo. Nulla bibendum turpis nunc, vel luctus augue cursus congue. Duis porttitor venenatis eros. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Ut feugiat, lacus quis consequat viverra, metus lacus tempor diam, vel dictum justo justo et metus. Praesent augue ipsum, ultrices eu libero faucibus, tristique laoreet quam. Donec pretium malesuada placerat. Integer quis dignissim risus. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.\nPraesent interdum dignissim lacus, sit amet ullamcorper odio iaculis a. Pellentesque euismod est vel quam malesuada vulputate. Integer tristique libero justo, sed aliquet sapien volutpat sed. Mauris at finibus neque. Pellentesque quam quam, volutpat at sagittis a, fringilla eu est. Etiam vel orci at metus vestibulum accumsan. In posuere, lacus eget lacinia ornare, felis ligula tempus lacus, ut vehicula est enim nec mi. Maecenas interdum tempus mollis. In hac habitasse platea dictumst. "
-        )
-        self.button_confirm1.configure(state="normal", text="Start")
+        diff = self.what_is_different()
+
+        what_to_write_on_first_frame = str = "\n\n".join(diff["files_only_in_x"])
+        what_to_write_on_second_frame = str = "\n\n".join(diff["files_only_in_y"])
+
+        if what_to_write_on_first_frame == "":
+            self.label8_frame1_text.configure(
+                text="(No new folders but will check zip files for updates)"
+            )
+        else:
+            self.label8_frame1_text.configure(text=what_to_write_on_first_frame)
+
+        if what_to_write_on_second_frame == "":
+            self.label9_frame2_text.configure(text="(Nothing to move to Complete)")
+        else:
+            self.label9_frame2_text.configure(text=what_to_write_on_second_frame)
+
+        self.button_confirm1.configure(state="normal")
 
     def button_select_folder01(self):
         dir = filedialog.askdirectory()
         self.label3_first_path.configure(text=dir)
         self.folder01 = dir
 
-        if self.folder01 != "..." and self.folder02 != "...":
+        if self.folder01 != "" and self.folder02 != "":
             self.change_frames_and_button()
+        else:
+            self.label8_frame1_text.configure(text="")
+            self.label9_frame2_text.configure(text="")
+            self.button_confirm1.configure(state="disabled")
 
     # ------------------------
 
@@ -203,21 +282,52 @@ class App(customtkinter.CTk):
         self.label5_second_path.configure(text=dir)
         self.folder02 = dir
 
-        if self.folder01 != "..." and self.folder02 != "...":
+        if self.folder01 != "" and self.folder02 != "":
             self.change_frames_and_button()
+        else:
+            self.label8_frame1_text.configure(text="")
+            self.label9_frame2_text.configure(text="")
+            self.button_confirm1.configure(state="disabled")
 
     # ------------------------
 
     def confirm(self):
-        confirm_msg = "Confirm"
-        print(self.folder01)
-        print(self.folder02)
-        print(confirm_msg)
-        return confirm_msg
+        self.what_to_log = []
+
+        self.do_the_extraction()
+
+        self.copy_folder_without_zip_file()
+
+        self.move_to_complete()
+
+        current_datetime = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+        str_current_datetime = str(current_datetime)
+
+        os.makedirs("Automatic logs", exist_ok=True)
+
+        file_name = f"Automatic logs\\log {str_current_datetime}.txt"
+
+        with open(file_name, "a") as f:  # Open the file in append mode
+            for line in self.what_to_log:
+                f.write(f"{line}\n")  # Write each line with a newline character
+
+        self.button_confirm1.configure(state="disabled", text="Done!")
+
+        self.open_toplevel()
+        self.protocol("WM_DELETE_WINDOW", lambda: self.destroy())
 
     # ------------------------
 
-    def listfolders(path):
+    def open_toplevel(self):
+        if self.toplevel_window is None or not self.toplevel_window.winfo_exists():
+            self.toplevel_window = ToplevelWindow(self)
+            self.toplevel_window.protocol("WM_DELETE_WINDOW", lambda: self.destroy())
+        else:
+            self.toplevel_window.focus()
+
+    # ------------------------
+
+    def listfolders(self, path):
         onlyfolders = [f for f in listdir(path)]
         if "Complete" in onlyfolders:
             onlyfolders.remove("Complete")
@@ -225,7 +335,7 @@ class App(customtkinter.CTk):
 
     # ------------------------
 
-    def listzipfiles(path):
+    def listzipfiles(self, path):
         zipfiles = []
         for dirName, subdirList, fileList in os.walk(path):
             dir = dirName.replace(path, "")
@@ -236,7 +346,7 @@ class App(customtkinter.CTk):
 
     # ------------------------
 
-    def extract_files(zip_file_path, target_directory):
+    def extract_files(self, zip_file_path, target_directory):
         with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
             # Dictionary for mapping old folder names to new names
             folder_rename_map = {
@@ -282,21 +392,32 @@ class App(customtkinter.CTk):
     # ------------------------
 
     def do_the_extraction(self):
+        diff = self.what_is_different()
+
+        for folder_without_zip_file in diff["files_only_in_x"]:
+            self.what_to_log.append(
+                f"New folder only in 01 created in 02 successfully: {folder_without_zip_file}"
+            )
+        self.what_to_log.append(f"")
+
+        self.button_confirm1.configure(state="disabled", text="Working...")
+        self.progressbar.set(0.25)
         zipfiles = self.listzipfiles(self.folder01)
         for current_zipfile in zipfiles:
             where_is_the_zip_file = self.folder01 + current_zipfile[1]
             target_directory = self.folder02 + current_zipfile[0]
             os.makedirs(target_directory, exist_ok=True)
             self.extract_files(where_is_the_zip_file, target_directory)
-            print(
-                f"Files extracted and folders renamed successfully! ({current_zipfile[0]})"
+            self.what_to_log.append(
+                f"Folder WITH zip file updated successfully: {current_zipfile[0]}"
             )
-        print()
+        self.what_to_log.append(f"")
 
     # ------------------------
 
     def copy_folder_without_zip_file(self):
         diff = self.what_is_different()
+        self.progressbar.set(0.50)
 
         for folder_without_zip_file in diff["files_only_in_x"]:
             # Specify the paths
@@ -307,16 +428,16 @@ class App(customtkinter.CTk):
             shutil.copytree(
                 source_folder_path, target_directory_path, dirs_exist_ok=True
             )
-
-            print(
-                f"Folder without zip file copied successfully! ({folder_without_zip_file})"
+            self.what_to_log.append(
+                f"Folder WITHOUT zip file copied successfully: {folder_without_zip_file}"
             )
-        print()
+        self.what_to_log.append(f"")
 
     # ------------------------
 
     def move_to_complete(self):
         diff = self.what_is_different()
+        self.progressbar.set(1)
 
         for folder_moving_to_complete in diff["files_only_in_y"]:
             if folder_moving_to_complete != "Complete":
@@ -332,9 +453,10 @@ class App(customtkinter.CTk):
                 # Move the folder
                 shutil.move(folder_to_move, complete_directory)
 
-                print(
-                    f"Folder moved successfully to Complete! ({folder_moving_to_complete})"
+                self.what_to_log.append(
+                    f"Folder moved successfully to Complete: {folder_moving_to_complete}"
                 )
+        self.what_to_log.append(f"")
 
     # ------------------------
 
